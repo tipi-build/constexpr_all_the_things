@@ -24,7 +24,7 @@ namespace parser
 
   // Get various types out of a parser
   template <typename P>
-  using opt_pair_parse_t = std::result_of_t<P(parse_input_t)>;
+  using opt_pair_parse_t = std::invoke_result_t<P, parse_input_t>;
   template <typename P>
   using pair_parse_t = typename opt_pair_parse_t<P>::value_type;
   template <typename P>
@@ -37,7 +37,7 @@ namespace parser
   template <typename F, typename P>
   constexpr auto fmap(F&& f, P&& p)
   {
-    using R = parse_result_t<std::result_of_t<F(parse_t<P>)>>;
+    using R = parse_result_t<std::invoke_result_t<F,parse_t<P>>>;
     return [f = std::forward<F>(f),
             p = std::forward<P>(p)] (parse_input_t i) -> R {
              const auto r = p(i);
@@ -50,7 +50,7 @@ namespace parser
   template <typename P, typename F>
   constexpr auto bind(P&& p, F&& f)
   {
-    using R = std::result_of_t<F(parse_t<P>, parse_input_t)>;
+    using R = std::invoke_result_t<F, parse_t<P>, parse_input_t>;
     return [=] (parse_input_t i) -> R {
              const auto r = p(i);
              if (!r) return std::nullopt;
@@ -104,7 +104,7 @@ namespace parser
   // accumulation: run two parsers in sequence and combine the outputs using the
   // given function. Both parsers must succeed.
   template <typename P1, typename P2, typename F,
-            typename R = std::result_of_t<F(parse_t<P1>, parse_t<P2>)>>
+            typename R = std::invoke_result_t<F, parse_t<P1>, parse_t<P2>>>
   constexpr auto combine(P1&& p1, P2&& p2, F&& f) {
     return [=] (parse_input_t i) -> parse_result_t<R> {
              const auto r1 = p1(i);
@@ -248,7 +248,7 @@ namespace parser
   template <typename P1, typename P2, typename F0, typename F>
   constexpr auto separated_by(P1&& p1, P2&& p2, F0&& init, F&& f)
   {
-    using R = parse_result_t<std::result_of_t<F0()>>;
+    using R = parse_result_t<std::invoke_result_t<F0>>;
     return [p1 = std::forward<P1>(p1), p2 = std::forward<P2>(p2),
             init = std::forward<F0>(init), f = std::forward<F>(f)] (
                 parse_input_t s) -> R {
