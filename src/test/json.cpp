@@ -323,12 +323,18 @@ void object_value_tests()
     // (this would be even better with file literals - P0373)
     constexpr auto config = R"(
       {
-        "feature-x-enabled": true
+        "feature-x-enabled": true,
+        "subobject" : {
+          "somekey" : "Reading a string"
+          ,"bam": 2147483647
+        }
       }
     )"_json;
     if constexpr (config["feature-x-enabled"].to_Boolean()) {
       // do something
       std::cout << "feature-x-enabled\n";
+      auto str = config["subobject"]["somekey"].to_String();
+      std::cout << std::string{str.c_str(), str.size()} << std::endl;
     } else {
       // do something else
       std::cout << "feature-x-disabled\n";
@@ -336,8 +342,45 @@ void object_value_tests()
   }
 }
 
+namespace test_strings_as_types {
+  using namespace JSON::literals;
+  static constexpr auto config_base = R"(
+    {
+      "feature-x-enabled": true,
+      "subobject" : {
+        "somekey" : "This is the value of the JSON subobject.somekey "
+        , "num": 2147483647
+        , "glasses" : "O-O"
+      }
+    }
+  )"_json;
+
+  template <cx::static_string> 
+  struct string_as_type {};
+
+  template <> 
+  struct string_as_type<"integer"> { using type = int; };
+
+  template <> 
+  struct string_as_type<"boolean"> { using type = bool; };
+
+  template <>
+  struct string_as_type<config_base["subobject"]["somekey"].to_String()> { using type = long;  static constexpr int call() { return 43; } };
+
+  template <>
+  struct string_as_type<config_base["subobject"]["glasses"].to_String()> { using type = std::pair<int,int>;  static constexpr int call() { return 41; } };
+
+  void ensure_addressable_types() {
+    static_assert(string_as_type<config_base["subobject"]["somekey"].to_String()>::call() == 43); 
+    static_assert(string_as_type<config_base["subobject"]["glasses"].to_String()>::call() == 41); 
+  }
+ 
+}
+
 void fail_tests()
 {
+
+
   // intentionally failing parse tests
   using namespace JSON::literals;
 
