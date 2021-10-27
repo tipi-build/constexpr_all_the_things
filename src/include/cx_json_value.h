@@ -238,72 +238,86 @@ namespace JSON
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) const {
-      const auto& ext = object_storage[index].to_Object();
+      const auto& ext = object_storage.get()[index].to_Object();
       bool notfound = true;
       for (auto i = ext.offset; i < ext.offset + ext.extent; i += 2) {
-        const auto& str = object_storage[i].to_String();
-        cx::static_string k { &string_storage[str.offset], str.extent };
+        const auto& str = object_storage.get()[i].to_String();
+        cx::static_string k { &string_storage.get()[str.offset], str.extent };
         if (StringCompare{}(k, s))
-          return value_proxy{i+1, object_storage, string_storage};
+          return value_proxy{i+1, object_storage.get(), string_storage.get()};
       }
       if (notfound) throw std::runtime_error("Key not found in object");
-      return value_proxy{0, object_storage, string_storage};
+      return value_proxy{0, object_storage.get(), string_storage.get()};
     }
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
     constexpr auto operator[](const K& s) {
-      const auto& ext = object_storage[index].to_Object();
+      const auto& ext = object_storage.get()[index].to_Object();
       bool notfound = true;
       for (auto i = ext.offset; i < ext.offset + ext.extent; i += 2) {
-        const auto& str = object_storage[i].to_String();
-        cx::static_string k { &string_storage[str.offset], str.extent };
+        const auto& str = object_storage.get()[i].to_String();
+        cx::static_string k { &string_storage.get()[str.offset], str.extent };
         if (StringCompare{}(k, s))
-          return value_proxy{i+1, object_storage, string_storage};
+          return value_proxy{i+1, object_storage.get(), string_storage.get()};
       }
       if (notfound) throw std::runtime_error("Key not found in object");
-      return value_proxy{0, object_storage, string_storage};
+      return value_proxy{0, object_storage.get(), string_storage.get()};
     }
     constexpr auto object_Size() const {
-      return object_storage[index].object_Size();
+      return object_storage.get()[index].object_Size();
     }
 
     constexpr auto operator[](std::size_t idx) const {
-      auto& ext = object_storage[index].to_Array();
+      auto& ext = object_storage.get()[index].to_Array();
       if (idx > ext.extent) throw std::runtime_error("Index past end of array");
-      return value_proxy{ext.offset + idx, object_storage, string_storage};
+      return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
     }
     constexpr auto operator[](std::size_t idx) {
-      auto& ext = object_storage[index].to_Array();
+      auto& ext = object_storage.get()[index].to_Array();
       if (idx > ext.extent) throw std::runtime_error("Index past end of array");
-      return value_proxy{ext.offset + idx, object_storage, string_storage};
+      return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
     }
     constexpr auto array_Size() const {
-      return object_storage[index].array_Size();
+      return object_storage.get()[index].array_Size();
     }
 
-    constexpr auto is_Null() const { return object_storage[index].is_Null(); }
+    constexpr auto is_Null() const { return object_storage.get()[index].is_Null(); }
 
     constexpr auto to_String() const {
-      auto s = object_storage[index].to_String();
-      return cx::static_string { &string_storage[s.offset], s.extent };
+      auto s = object_storage.get()[index].to_String();
+      return cx::static_string { &string_storage.get()[s.offset], s.extent };
     }
     constexpr auto to_String() {
-      auto s = object_storage[index].to_String();
-      return cx::static_string { &string_storage[s.offset], s.extent };
+      auto s = object_storage.get()[index].to_String();
+      return cx::static_string { &string_storage.get()[s.offset], s.extent };
     }
     constexpr auto string_Size() const {
-      return object_storage[index].string_Size();
+      return object_storage.get()[index].string_Size();
     }
 
-    constexpr decltype(auto) to_Number() const { return object_storage[index].to_Number(); }
-    constexpr decltype(auto) to_Number() { return object_storage[index].to_Number(); }
+    constexpr decltype(auto) to_Number() const { return object_storage.get()[index].to_Number(); }
+    constexpr decltype(auto) to_Number() { return object_storage.get()[index].to_Number(); }
 
-    constexpr decltype(auto) to_Boolean() const { return object_storage[index].to_Boolean(); }
-    constexpr decltype(auto) to_Boolean() { return object_storage[index].to_Boolean(); }
+    constexpr decltype(auto) to_Boolean() const { return object_storage.get()[index].to_Boolean(); }
+    constexpr decltype(auto) to_Boolean() { return object_storage.get()[index].to_Boolean(); }
+
+    constexpr value_proxy ( const value_proxy  & ) = default; 
+
+    constexpr value_proxy(std::size_t i, const T& objects, const S& strings) 
+    : index{i},
+      object_storage{objects}, 
+      string_storage{strings}
+    { }
+
+    /*constexpr value_proxy(std::size_t i, const T& objects, const S& strings) 
+    : index{i},
+      object_storage{std::cref(objects)}, 
+      string_storage{std::cref(strings)}
+    { }*/
 
     std::size_t index;
-    T& object_storage;
-    S& string_storage;
+    std::reference_wrapper<const std::remove_reference_t<T>> object_storage;
+    std::reference_wrapper<const std::remove_reference_t<S>> string_storage;
   };
 
   template <size_t NumObjects, size_t StringSize>

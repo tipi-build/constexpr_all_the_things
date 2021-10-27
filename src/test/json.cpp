@@ -351,6 +351,7 @@ namespace test_strings_as_types {
         "somekey" : "This is the value of the JSON subobject.somekey "
         , "num": 2147483647
         , "glasses" : "O-O"
+        , "subsubobject" : { "good" : "You found me !" }
       }
     }
   )"_json;
@@ -373,6 +374,27 @@ namespace test_strings_as_types {
   void ensure_addressable_types() {
     static_assert(string_as_type<config_base["subobject"]["somekey"].to_String()>::call() == 43); 
     static_assert(string_as_type<config_base["subobject"]["glasses"].to_String()>::call() == 41); 
+  }
+
+  void assignable_proxy_at_constexpr() {
+    auto get_json_by_path = [&](const auto& path) consteval {
+      JSON::value_proxy deeper_json = JSON::value_proxy{0, config_base.object_storage, config_base.string_storage}; 
+        
+      auto segment_begin = path.begin() + 2; // Skip #/
+      auto segment_end = std::find(segment_begin, path.end(), '/');
+      for (; segment_end != path.end();) {
+        cx::static_string path_segment{segment_begin, segment_end};
+        deeper_json = deeper_json[path_segment];
+        segment_begin = segment_end + 1;
+        segment_end = std::find(segment_begin + 1, path.end(), '/');
+
+      } 
+      auto last_segment = cx::static_string{segment_begin, segment_end};
+      return deeper_json[last_segment];
+    };
+
+    constexpr cx::static_string path = "#/subobject/subsubobject/good";
+    static_assert(get_json_by_path(path).to_String() == "You found me !");
   }
  
 }
