@@ -15,13 +15,13 @@ namespace cx
   struct static_string
   {
 
-    std::size_t m_size{N};
+    std::size_t m_size{};
     char m_data[N+1] = {}; 
 
-    constexpr static_string(const char (&str)[N + 1])
+    constexpr static_string(const char (&str)[N+1])
       : static_string(str, str + N) {}
 
-    constexpr static_string(const char (&str)[N + 1], std::size_t s)
+    constexpr static_string(const char (&str)[N+1], std::size_t s)
       : static_string(str, str + s) {}
 
     constexpr static_string(const char *str, std::size_t s)
@@ -36,7 +36,7 @@ namespace cx
     }
 
     template <std::input_iterator I, std::sentinel_for<I> S>
-    requires std::convertible_to<std::iter_value_t<I>, char>  //
+    requires std::convertible_to<std::iter_value_t<I>, char> 
     constexpr static_string(I first, S last) {
       assign(first, last);
     }
@@ -69,6 +69,10 @@ namespace cx
     }
   };
 
+  template<static_string str>
+  constexpr auto static_shrink_to_fit() {
+    return static_string<str.size()>{str.c_str(), str.size()};
+  }
 
   template <std::size_t N>
   static_string(const char (&arr)[N])
@@ -76,7 +80,7 @@ namespace cx
 
   template <std::size_t N>
   static_string(const char (&arr)[N], std::size_t s)
-  -> static_string<N>;
+  -> static_string<N-1>;
 
 
   // note that this works because vector is implicitly null terminated with its data initializer

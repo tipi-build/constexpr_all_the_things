@@ -352,7 +352,8 @@ namespace test_strings_as_types {
         , "num": 2147483647
         , "glasses" : "O-O"
         , "subsubobject" : { "good" : "You found me !" }
-      }
+      },
+      "type": "string"
     }
   )"_json;
 
@@ -371,7 +372,17 @@ namespace test_strings_as_types {
   template <>
   struct string_as_type<config_base["subobject"]["glasses"].to_String()> { using type = std::pair<int,int>;  static constexpr int call() { return 41; } };
 
+  template <> 
+  struct string_as_type<"string"> { using type = std::string; };
+
+  static constexpr const char* type_name = "type_name";
   void ensure_addressable_types() {
+    auto the_type = config_base["type"].to_String();
+    std::cout << "type : " << typeid(the_type).name() << std::endl;
+    std::cout << "type : " << the_type.c_str() << std::endl;
+    string_as_type<cx::static_string<config_base["type"].to_String().size()>{config_base["type"].to_String().m_data, config_base["type"].to_String().size()}>::type somestring = "hello";
+    string_as_type<cx::static_shrink_to_fit<config_base["type"].to_String()>()>::type somenewstring = "holaa";
+
     static_assert(string_as_type<config_base["subobject"]["somekey"].to_String()>::call() == 43); 
     static_assert(string_as_type<config_base["subobject"]["glasses"].to_String()>::call() == 41); 
   }
