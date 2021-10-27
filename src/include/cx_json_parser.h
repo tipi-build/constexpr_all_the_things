@@ -667,6 +667,9 @@ namespace JSON
     constexpr auto object_Size() const {
       return Value_Proxy{0, object_storage, string_storage}.object_Size();
     }
+    constexpr auto object_key(std::size_t idx) const {
+      return Value_Proxy{0, object_storage, string_storage}.object_key(idx);
+    }
 
     constexpr auto operator[](std::size_t idx) const {
       return Value_Proxy{0, object_storage, string_storage}[idx];

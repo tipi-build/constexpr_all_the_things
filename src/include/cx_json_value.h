@@ -128,6 +128,16 @@ namespace JSON
       return data.unparsed;
     }
 
+    constexpr bool is_Array() const
+    {
+      return (type == Type::Array);
+    }
+
+    constexpr bool is_Object() const
+    {
+      return (type == Type::Object);
+    }
+
     constexpr const ExternalView& to_Array() const
     {
       assert_type(Type::Array);
@@ -267,15 +277,35 @@ namespace JSON
       return object_storage.get()[index].object_Size();
     }
 
+    constexpr auto object_key(std::size_t idx) const {
+      auto& ext = object_storage.get()[index].to_Object();
+      if ((idx*2) > (ext.offset + ext.extent)) throw std::runtime_error("Index past end of object");
+      const auto& str = object_storage.get()[ext.offset + (idx*2)].to_String();
+      cx::static_string k { &string_storage.get()[str.offset], str.extent };
+      return k;
+    }
+
     constexpr auto operator[](std::size_t idx) const {
-      auto& ext = object_storage.get()[index].to_Array();
-      if (idx > ext.extent) throw std::runtime_error("Index past end of array");
-      return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
+      if (object_storage.get()[index].is_Array()) {
+        auto& ext = object_storage.get()[index].to_Array();
+        if (idx > ext.extent) throw std::runtime_error("Index past end of array");
+        return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
+      } else {
+        auto& ext = object_storage.get()[index].to_Object();
+        if ((idx*2) > (ext.offset + ext.extent)) throw std::runtime_error("Index past end of object");
+        return value_proxy{ext.offset + (1 + (idx*2)), object_storage.get(), string_storage.get()};
+      }
     }
     constexpr auto operator[](std::size_t idx) {
-      auto& ext = object_storage.get()[index].to_Array();
-      if (idx > ext.extent) throw std::runtime_error("Index past end of array");
-      return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
+      if (object_storage.get()[index].is_Array()) {
+        auto& ext = object_storage.get()[index].to_Array();
+        if (idx > ext.extent) throw std::runtime_error("Index past end of array");
+        return value_proxy{ext.offset + idx, object_storage.get(), string_storage.get()};
+      } else {
+        auto& ext = object_storage.get()[index].to_Object();
+        if ((idx*2) > (ext.offset + ext.extent)) throw std::runtime_error("Index past end of object");
+        return value_proxy{ext.offset + (1 + (idx*2)), object_storage.get(), string_storage.get()};
+      }
     }
     constexpr auto array_Size() const {
       return object_storage.get()[index].array_Size();

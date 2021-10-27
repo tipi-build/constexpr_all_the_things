@@ -396,6 +396,11 @@ namespace test_strings_as_types {
     constexpr cx::static_string path = "#/subobject/subsubobject/good";
     static_assert(get_json_by_path(path).to_String() == "You found me !");
   }
+
+  void object_key() {
+    static_assert(config_base.object_key(0) == "feature-x-enabled");
+    static_assert(config_base.object_key(1) == "subobject");
+  }
  
 }
 
