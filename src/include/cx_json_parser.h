@@ -724,6 +724,18 @@ namespace JSON
       return val;
     }
 
+    template <typename T, T... Ts>
+    constexpr auto operator "" _cx_json()
+    {
+      std::initializer_list<T> il{Ts...};
+      // I tried using structured bindings here, but g++ says:
+      // "error: decomposition declaration cannot be declared 'constexpr'"
+      constexpr auto S = sizes<Ts...>();
+      auto val = value_wrapper<S.num_objects, S.string_size>{};
+      val.construct(std::string_view(il.begin(), il.size()));
+      return val;
+    }
+
   }
 
 }
