@@ -323,12 +323,18 @@ void object_value_tests()
     // (this would be even better with file literals - P0373)
     constexpr auto config = R"(
       {
-        "feature-x-enabled": true
+        "feature-x-enabled": true,
+        "subobject" : {
+          "somekey" : "Reading a string"
+          ,"bam": 2147483647
+        }
       }
     )"_json;
     if constexpr (config["feature-x-enabled"].to_Boolean()) {
       // do something
       std::cout << "feature-x-enabled\n";
+      auto str = config["subobject"]["somekey"].to_String();
+      std::cout << std::string{str.c_str(), str.size()} << std::endl;
     } else {
       // do something else
       std::cout << "feature-x-disabled\n";
@@ -336,8 +342,83 @@ void object_value_tests()
   }
 }
 
+namespace test_strings_as_types {
+  using namespace JSON::literals;
+  static constexpr auto config_base = R"(
+    {
+      "feature-x-enabled": true,
+      "subobject" : {
+        "somekey" : "This is the value of the JSON subobject.somekey "
+        , "num": 2147483647
+        , "glasses" : "O-O"
+        , "subsubobject" : { "good" : "You found me !" }
+      },
+      "type": "string"
+    }
+  )"_json;
+
+  template <cx::static_string> 
+  struct string_as_type {};
+
+  template <> 
+  struct string_as_type<"integer"> { using type = int; };
+
+  template <> 
+  struct string_as_type<"boolean"> { using type = bool; };
+
+  template <>
+  struct string_as_type<config_base["subobject"]["somekey"].to_String()> { using type = long;  static constexpr int call() { return 43; } };
+
+  template <>
+  struct string_as_type<config_base["subobject"]["glasses"].to_String()> { using type = std::pair<int,int>;  static constexpr int call() { return 41; } };
+
+  template <> 
+  struct string_as_type<"string"> { using type = std::string; };
+
+  static constexpr const char* type_name = "type_name";
+  void ensure_addressable_types() {
+    auto the_type = config_base["type"].to_String();
+    std::cout << "type : " << typeid(the_type).name() << std::endl;
+    std::cout << "type : " << the_type.c_str() << std::endl;
+    string_as_type<cx::static_string<config_base["type"].to_String().size()>{config_base["type"].to_String().m_data, config_base["type"].to_String().size()}>::type somestring = "hello";
+    string_as_type<cx::static_shrink_to_fit<config_base["type"].to_String()>()>::type somenewstring = "holaa";
+
+    static_assert(string_as_type<config_base["subobject"]["somekey"].to_String()>::call() == 43); 
+    static_assert(string_as_type<config_base["subobject"]["glasses"].to_String()>::call() == 41); 
+  }
+
+  void assignable_proxy_at_constexpr() {
+    auto get_json_by_path = [&](const auto& path) consteval {
+      JSON::value_proxy deeper_json = JSON::value_proxy{0, config_base.object_storage, config_base.string_storage}; 
+        
+      auto segment_begin = path.begin() + 2; // Skip #/
+      auto segment_end = std::find(segment_begin, path.end(), '/');
+      for (; segment_end != path.end();) {
+        cx::static_string path_segment{segment_begin, segment_end};
+        deeper_json = deeper_json[path_segment];
+        segment_begin = segment_end + 1;
+        segment_end = std::find(segment_begin + 1, path.end(), '/');
+
+      } 
+      auto last_segment = cx::static_string{segment_begin, segment_end};
+      return deeper_json[last_segment];
+    };
+
+    constexpr cx::static_string path = "#/subobject/subsubobject/good";
+    static_assert(get_json_by_path(path).to_String() == "You found me !");
+  }
+
+  void object_key() {
+    static_assert(config_base.object_key(0) == "feature-x-enabled");
+    static_assert(config_base.object_key(1) == "subobject");
+  }
+ 
+}
+
 void fail_tests()
 {
+
+
   // intentionally failing parse tests
   using namespace JSON::literals;
 

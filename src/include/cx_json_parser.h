@@ -651,8 +651,8 @@ namespace JSON
       return value_proxy{0, object_storage, string_storage};
     }
 
-    using Value_Proxy = value_proxy<NumObjects, const value[NumObjects],
-                                   const cx::basic_string<char, StringSize>>;
+    using Value_Proxy = value_proxy<NumObjects,  value[NumObjects],
+                                    cx::basic_string<char, StringSize>>;
 
     template <typename K,
               std::enable_if_t<!std::is_integral<K>::value, int> = 0>
@@ -666,6 +666,9 @@ namespace JSON
     }
     constexpr auto object_Size() const {
       return Value_Proxy{0, object_storage, string_storage}.object_Size();
+    }
+    constexpr auto object_key(std::size_t idx) const {
+      return Value_Proxy{0, object_storage, string_storage}.object_key(idx);
     }
 
     constexpr auto operator[](std::size_t idx) const {
@@ -699,7 +702,7 @@ namespace JSON
     constexpr auto num_objects() const { return NumObjects; }
     constexpr auto string_size() const { return StringSize; }
 
-  private:
+  //private:
     // when this is a cx::vector, GCC ICEs...
     value object_storage[NumObjects];
     cx::basic_string<char, StringSize> string_storage;
@@ -712,7 +715,19 @@ namespace JSON
     template <typename T, T... Ts>
     constexpr auto operator "" _json()
     {
-      const std::initializer_list<T> il{Ts...};
+      std::initializer_list<T> il{Ts...};
+      // I tried using structured bindings here, but g++ says:
+      // "error: decomposition declaration cannot be declared 'constexpr'"
+      constexpr auto S = sizes<Ts...>();
+      auto val = value_wrapper<S.num_objects, S.string_size>{};
+      val.construct(std::string_view(il.begin(), il.size()));
+      return val;
+    }
+
+    template <typename T, T... Ts>
+    constexpr auto operator "" _cx_json()
+    {
+      std::initializer_list<T> il{Ts...};
       // I tried using structured bindings here, but g++ says:
       // "error: decomposition declaration cannot be declared 'constexpr'"
       constexpr auto S = sizes<Ts...>();
